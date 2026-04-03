@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Family Schedule</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .event-card { transition: all 0.2s ease; }
+        .event-card:hover { transform: translateY(-2px); box-shadow: 0 8px 25px -5px rgba(0,0,0,0.15); }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen">
+    <!-- Header -->
+    <header class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-6 px-4 shadow-lg">
+        <div class="max-w-6xl mx-auto flex justify-between items-center">
+            <div>
+                <h1 class="text-2xl font-bold">Family Schedule</h1>
+                <p class="text-indigo-200 text-sm">Coordinate activities for the whole family</p>
+            </div>
+            <button onclick="toggleModal('memberModal')" class="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg font-medium text-sm transition">
+                + Add Family Member
+            </button>
+        </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto px-4 py-6">
+        <!-- Family Members Bar -->
+        <section id="familyMembers" class="flex gap-3 mb-6 flex-wrap"></section>
+
+        <!-- Dashboard / Upcoming -->
+        <section class="mb-8">
+            <h2 class="text-lg font-semibold text-slate-800 mb-4">📅 This Week</h2>
+            <div id="upcomingSchedule" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+        </section>
+
+        <!-- Calendar View -->
+        <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-8">
+            <div class="flex justify-between items-center mb-6">
+                <div class="flex gap-2">
+                    <button onclick="changeWeek(-1)" class="p-2 hover:bg-slate-100 rounded-lg text-slate-600">←</button>
+                    <span id="weekLabel" class="font-medium text-slate-700 min-w-[200px] text-center"></span>
+                    <button onclick="changeWeek(1)" class="p-2 hover:bg-slate-100 rounded-lg text-slate-600">→</button>
+                </div>
+                <button onclick="toggleModal('activityModal')" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium text-sm transition">
+                    + Add Activity
+                </button>
+            </div>
+            <div id="calendarGrid" class="grid grid-cols-7 gap-2"></div>
+        </section>
+
+        <!-- Conflict Warnings -->
+        <section id="conflictsSection" class="hidden mb-8">
+            <div class="bg-red-50 border border-red-200 rounded-xl p-4">
+                <h3 class="font-semibold text-red-800 mb-2">⚠️ Scheduling Conflicts</h3>
+                <div id="conflictsList"></div>
+            </div>
+        </section>
+
+        <!-- Settings -->
+        <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+            <h2 class="font-semibold text-slate-800 mb-4">Settings</h2>
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="font-medium text-slate-700">Reminders</p>
+                    <p class="text-sm text-slate-500">Get notified before activities</p>
+                </div>
+                <button id="remindersToggle" onclick="toggleReminders()" class="w-12 h-6 bg-slate-300 rounded-full relative transition-colors">
+                    <span class="absolute w-5 h-5 bg-white rounded-full top-0.5 left-0.5 transition-transform"></span>
+                </button>
+            </div>
+        </section>
+    </main>
+
+    <!-- Add Member Modal -->
+    <div id="memberModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50">
+        <div class="bg-white rounded-xl p-6 w-full max-w-md mx-4">
+            <h2 class="text-lg font-semibold mb-4">Add Family Member</h2>
+            <input id="memberName" type="text" placeholder="Name" class="w-full border border-slate-300 rounded-lg px-4 py-2 mb-3">
+            <input id="memberAge" type="number" placeholder="Age" class="w-full border border-slate-300 rounded-lg px-4 py-2 mb-4">
+            <div class="flex gap-3">
+                <button onclick="addMember()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg font-medium">Add</button>
+                <button onclick="toggleModal('memberModal')" class="flex-1 border border-slate-300 py-2 rounded-lg font-medium text-slate-600">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Activity Modal -->
+    <div id="activityModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50">
+        <div class="bg-white rounded-xl p-6 w-full max-w-md mx-4">
+            <h2 class="text-lg font-semibold mb-4">Add Activity</h2>
+            <select id="activityMember" class="w-full border border-slate-300 rounded-lg px-4 py-2 mb-3"></select>
+            <input id="activityTitle" type="text" placeholder="Activity Title" class="w-full border border-slate-300 rounded-lg px-4 py-2 mb-3">
+            <select id="activityType" class="w-full border border-slate-300 rounded-lg px-4 py-2 mb-3">
+                <option value="sport">🏀 Sport</option>
+                <option value="school">📚 School</option>
+                <option value="therapy">🧘 Therapy</option>
+                <option value="playdate">🎮 Playdate</option>
+                <option value="appointment">🏥 Appointment</option>
+                <option value="other">📌 Other</option>
+            </select>
+            <input id="activityDate" type="date" class="w-full border border-slate-300 rounded-lg px-4 py-2 mb-3">
+            <div class="flex gap-2 mb-3">
+                <input id="activityStart" type="time" class="flex-1 border border-slate-300 rounded-lg px-4 py-2" placeholder="Start">
+                <input id="activityEnd" type="time" class="flex-1 border border-slate-300 rounded-lg px-4 py-2" placeholder="End">
+            </div>
+            <input id="activityLocation" type="text" placeholder="Location" class="w-full border border-slate-300 rounded-lg px-4 py-2 mb-4">
+            <div class="flex gap-3">
+                <button onclick="addActivity()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg font-medium">Add</button>
+                <button onclick="toggleModal('activityModal')" class="flex-1 border border-slate-300 py-2 rounded-lg font-medium text-slate-600">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // State
+        let members = JSON.parse(localStorage.getItem('familyMembers')) || [];
+        let activities = JSON.parse(localStorage.getItem('familyActivities')) || [];
+        let remindersEnabled = JSON.parse(localStorage.getItem('remindersEnabled')) || false;
+        let currentWeekOffset = 0;
+
+        // Icons per type
+        const typeIcons = { sport: '🏀', school: '📚', therapy: '🧘', playdate: '🎮', appointment: '🏥', other: '📌' };
+        const typeColors = { sport: 'bg-orange-100 text-orange-800', school: 'bg-blue-100 text-blue-800', therapy: 'bg-green-100 text-green-800', playdate: 'bg-purple-100 text-purple-800', appointment: 'bg-red-100 text-red-800', other: 'bg-slate-100 text-slate-800' };
+
+        // Init
+        renderMembers();
+        renderUpcoming();
+        renderCalendar();
+        checkConflicts();
+        updateRemindersToggle();
+
+        // Modal toggle
+        function toggleModal(id) {
+            const el = document.getElementById(id);
+            el.classList.toggle('hidden');
+            el.classList.toggle('flex');
+        }
+
+        // Add member
+        function addMember() {
+            const name = document.getElementById('memberName').value.trim();
+            const age = document.getElementById('memberAge').value;
+            if (!name || !age) return;
+            members.push({ id: Date.now(), name, age: parseInt(age) });
+            localStorage.setItem('familyMembers', JSON.stringify(members));
+            renderMembers();
+            updateMemberSelect();
+            toggleModal('memberModal');
+            document.getElementById('memberName').value = '';
+            document.getElementById('memberAge').value = '';
+        }
+
+        function deleteMember(id) {
+            members = members.filter(m => m.id !== id);
+            activities = activities.filter(a => a.memberId !== id);
+            localStorage.setItem('familyMembers', JSON.stringify(members));
+            localStorage.setItem('familyActivities', JSON.stringify(activities));
+            renderMembers();
+            renderUpcoming();
+            renderCalendar();
+            checkConflicts();
+            updateMemberSelect();
+        }
+
+        // Render members
+        function renderMembers() {
+            const container = document.getElementById('familyMembers');
+            container.innerHTML = members.map(m => `
+                <div class="flex items-center gap-2 bg-white px-4 py-2 rounded-full shadow-sm border border-slate-200">
+                    <span class="font-medium text-slate-700">${m.name}</span>
+                    <span class="text-slate-400 text-sm">${m.age}yo</span>
+                    <button onclick="deleteMember(${m.id})" class="text-red-400 hover:text-red-600 text-sm">✕</button>
+                </div>
+            `).join('') || '<p class="text-slate-500 text-sm">No family members yet. Add one above!</p>';
+        }
+
+        // Update member select in activity modal
+        function updateMemberSelect() {
+            const select = document.getElementById('activityMember');
+            select.innerHTML = members.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
+        }
+
+        // Add activity
+        function addActivity() {
+            const memberId = parseInt(document.getElementById('activityMember').value);
+            const title = document.getElementById('activityTitle').value.trim();
+            const type = document.getElementById('activityType').value;
+            const date = document.getElementById('activityDate').value;
+            const start = document.getElementById('activityStart').value;
+            const end = document.getElementById('activityEnd').value;
+            const location = document.getElementById('activityLocation').value.trim();
+
+            if (!memberId || !title || !date || !start) return;
+
+            activities.push({ id: Date.now(), memberId, title, type, date, start, end, location });
+            localStorage.setItem('familyActivities', JSON.stringify(activities));
+
+            renderUpcoming();
+            renderCalendar();
+            checkConflicts();
+            toggleModal('activityModal');
+
+            // Clear form
+            document.getElementById('activityTitle').value = '';
+            document.getElementById('activityLocation').value = '';
+        }
+
+        function deleteActivity(id) {
+            activities = activities.filter(a => a.id !== id);
+            localStorage.setItem('familyActivities', JSON.stringify(activities));
+            renderUpcoming();
+            renderCalendar();
+            checkConflicts();
+        }
+
+        // Render upcoming (this week)
+        function renderUpcoming() {
+            const now = new Date();
+            const weekStart = new Date(now);
+            weekStart.setDate(now.getDate() - now.getDay() + currentWeekOffset * 7);
+            const weekEnd = new Date(weekStart);
+            weekEnd.setDate(weekStart.getDate() + 6);
+
+            const weekActivities = activities.filter(a => {
+                const d = new Date(a.date);
+                return d >= weekStart && d <= weekEnd;
+            }).sort((a, b) => a.date.localeCompare(b.date) || a.start.localeCompare(b.start));
+
+            const container = document.getElementById('upcomingSchedule');
+            container.innerHTML = weekActivities.length ? weekActivities.map(a => {
+                const member = members.find(m => m.id === a.memberId) || {};
+                const dateObj = new Date(a.date);
+                const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'short' });
+                const dateStr = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                return `
+                    <div class="event-card bg-white rounded-lg p-4 border border-slate-200">
+                        <div class="flex items-start justify-between mb-2">
+                            <span class="text-xs font-medium ${typeColors[a.type]} px-2 py-1 rounded">${typeIcons[a.type]} ${a.type}</span>
+                            <button onclick="deleteActivity(${a.id})" class="text-slate-400 hover:text-red-500">✕</button>
+                        </div>
+                        <h3 class="font-semibold text-slate-800">${a.title}</h3>
+                        <p class="text-sm text-slate-500">${member.name || 'Unknown'}</p>
+                        <div class="mt-2 text-sm text-slate-600">
+                            <p>📅 ${dayName}, ${dateStr}</p>
+                            <p>🕐 ${a.start}${a.end ? ' - ' + a.end : ''}</p>
+                            ${a.location ? `<p>📍 ${a.location}</p>` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('') : '<p class="text-slate-500 col-span-3 text-center py-8">No activities this week</p>';
+        }
+
+        // Calendar
+        function renderCalendar() {
+            const now = new Date();
+            const weekStart = new Date(now);
+            weekStart.setDate(now.getDate() - now.getDay() + currentWeekOffset * 7);
+
+            // Week label
+            const weekEnd = new Date(weekStart);
+            weekEnd.setDate(weekStart.getDate() + 6);
+            document.getElementById('weekLabel').textContent = `${weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${weekEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+
+            // Days header
+            const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            let html = days.map(d => `<div class="text-center text-sm font-medium text-slate-500 py-2">${d}</div>`).join('');
+
+            // Calendar cells
+            for (let i = 0; i < 7; i++) {
+                const day = new Date(weekStart);
+                day.setDate(weekStart.getDate() + i);
+                const dateStr = day.toISOString().split('T')[0];
+                const isToday = dateStr === now.toISOString().split('T')[0];
+
+                const dayActs = activities.filter(a => a.date === dateStr);
+                html += `
+                    <div class="min-h-[120px] bg-slate-50 rounded-lg p-2 ${isToday ? 'ring-2 ring-indigo-500' : ''}">
+                        <div class="text-sm font-medium text-slate-600 mb-1">${day.getDate()}</div>
+                        ${dayActs.map(a => {
+                            const member = members.find(m => m.id === a.memberId);
+                            return `
+                                <div class="text-xs p-1 rounded mb-1 ${typeColors[a.type]}">
+                                    <div class="font-medium truncate">${a.title}</div>
+                                    <div class="opacity-75">${a.start} ${member ? '- ' + member.name : ''}</div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                `;
+            }
+
+            document.getElementById('calendarGrid').innerHTML = html;
+        }
+
+        function changeWeek(delta) {
+            currentWeekOffset += delta;
+            renderUpcoming();
+            renderCalendar();
+        }
+
+        // Conflicts
+        function checkConflicts() {
+            const conflicts = [];
+            for (let i = 0; i < activities.length; i++) {
+                for (let j = i + 1; j < activities.length; j++) {
+                    const a = activities[i];
+                    const b = activities[j];
+                    if (a.date === b.date && a.start && b.start) {
+                        const aStart = parseInt(a.start.replace(':', ''));
+                        const aEnd = a.end ? parseInt(a.end.replace(':', '')) : aStart + 100;
+                        const bStart = parseInt(b.start.replace(':', ''));
+                        const bEnd = b.end ? parseInt(b.end.replace(':', '')) : bStart + 100;
+                        
+                        if (!(aEnd <= bStart || bEnd <= aStart)) {
+                            conflicts.push({ a, b });
+                        }
+                    }
+                }
+            }
+
+            const section = document.getElementById('conflictsSection');
+            const list = document.getElementById('conflictsList');
+            
+            if (conflicts.length) {
+                section.classList.remove('hidden');
+                list.innerHTML = conflicts.map(c => `
+                    <div class="text-sm text-red-700 py-1 border-b border-red-100 last:border-0">
+                        <strong>${c.a.title}</strong> (${c.a.start}) overlaps with <strong>${c.b.title}</strong> (${c.b.start}) on ${c.a.date}
+                    </div>
+                `).join('');
+            } else {
+                section.classList.add('hidden');
+            }
+        }
+
+        // Reminders
+        function toggleReminders() {
+            remindersEnabled = !remindersEnabled;
+            localStorage.setItem('remindersEnabled', JSON.stringify(remindersEnabled));
+            updateRemindersToggle();
+            
+            if (remindersEnabled && 'Notification' in window) {
+                Notification.requestPermission();
+            }
+        }
+
+        function updateRemindersToggle() {
+            const toggle = document.getElementById('remindersToggle');
+            if (remindersEnabled) {
+                toggle.classList.remove('bg-slate-300');
+                toggle.classList.add('bg-indigo-600');
+                toggle.querySelector('span').classList.add('translate-x-6');
+            } else {
+                toggle.classList.add('bg-slate-300');
+                toggle.classList.remove('bg-indigo-600');
+                toggle.querySelector('span').classList.remove('translate-x-6');
+            }
+        }
+
+        // Request notification permission on load
+        if (remindersEnabled && 'Notification' in window && Notification.permission === 'default') {
+            Notification.requestPermission();
+        }
+
+        // Pre-populate member select
+        updateMemberSelect();
+        
+        // Set default date to today
+        document.getElementById('activityDate').value = new Date().toISOString().split('T')[0];
+    </script>
+</body>
+</html>
